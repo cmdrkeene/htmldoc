@@ -16,11 +16,11 @@ func New(s string) (*FilterChain, error) {
 }
 
 func MustNew(s string) *FilterChain {
-	root, err := parseString(s)
+	root, err := New(s)
 	if err != nil {
 		panic(err)
 	}
-	return newFilterChain(root)
+	return root
 }
 
 func parseString(s string) (*html.Node, error) {
@@ -169,7 +169,8 @@ func (self *FilterChain) newSelectorFilter(s string) []Filter {
 	return chain
 }
 
-func (self *FilterChain) All() []*Node {
+func (self *FilterChain) All(selectors ...string) []*Node {
+	self.addSelectors(selectors)
 	var found []*Node
 	self.searchFunc(self.root, func(n *html.Node) {
 		if self.match(n) {

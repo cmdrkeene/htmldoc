@@ -36,6 +36,12 @@ const TestPage = `
 
 const TagNotFound = "tag not found"
 
+func TestBySelector_AllTag(t *testing.T) {
+	if len(MustNew(TestPage).All("a")) != 4 {
+		t.Error("want", 4)
+	}
+}
+
 func TestBySelector_Tag(t *testing.T) {
 	node, _ := MustNew(TestPage).First("a")
 	Expect(t, "Found By Selector").Equal(node.Text(), "About")
