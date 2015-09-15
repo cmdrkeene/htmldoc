@@ -13,7 +13,7 @@ const TestPage = `
 <body>
   <nav>
     <ul class="nav">
-      <li><a href="/log_in"<button>Log In</button></a></li>
+      <li><a href="/log_in"><button>Log In</button></a></li>
       <li><a href=" /sign_up " class="active "><button>Sign Up</button></a></li>
       <li><a href="/home" class="one two three">Home</a></li>
       <li><a href="/about">About</a></li>
@@ -21,10 +21,12 @@ const TestPage = `
   </nav>
   <h1>Register</h1>
   <form method="post" action="/sign_up">
-    <label><input type="text" name="name" /></label>
-    <label><input type="email" name="email" /></label>
-    <label><input type="password" name="password" /></label>
-    <label><textarea name="bio">Biography</textarea></label>
+    <fieldset>
+      <label><input type="text" name="Name" /></label>
+      <label><input type="email" name="Email" /></label>
+      <label><input type="password" name="Password" /></label>
+      <label><textarea name="Bio">Biography</textarea></label>
+    </fieldset>
 
     <input type="submit" name="Register" />
   </form>
@@ -33,6 +35,18 @@ const TestPage = `
 `
 
 const TagNotFound = "tag not found"
+
+func TestParent(t *testing.T) {
+	input, _ := MustNew(TestPage).
+		Tag("input").
+		Attribute("type", "email").
+		First()
+
+	form, found := input.Parent().Tag("form").First()
+
+	Expect(t, "Found").Equal(found, true)
+	Expect(t, "Form Action").Equal(form.Attribute("action"), "/sign_up")
+}
 
 func TestAll_Simple(t *testing.T) {
 	nodes := MustNew(TestPage).Tag("a").All()

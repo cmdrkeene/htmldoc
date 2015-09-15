@@ -7,71 +7,39 @@ import (
 )
 import "bytes"
 
-func New(s string) (*Document, error) {
+func New(s string) (*FilterChain, error) {
 	root, err := parseString(s)
 	if err != nil {
 		return nil, err
 	}
-	return newDocument(root), nil
+	return newFilterChain(root), nil
 }
 
-func MustNew(s string) *Document {
+func MustNew(s string) *FilterChain {
 	root, err := parseString(s)
 	if err != nil {
 		panic(err)
 	}
-	return newDocument(root)
-}
-
-func newDocument(root *html.Node) *Document {
-	return &Document{root: root}
+	return newFilterChain(root)
 }
 
 func parseString(s string) (*html.Node, error) {
 	return html.Parse(bytes.NewBufferString(s))
 }
 
-type Document struct {
-	root *html.Node
-}
-
-func (self *Document) All(filters ...Filter) []*Node {
-	filter := all(filters...)
-	var found []*Node
-	search(self.root, func(n *html.Node) {
-		if filter(n) {
-			found = append(found, newNode(n))
-		}
-	})
-	return found
-}
-
-func (self *Document) First(filters ...Filter) (*Node, bool) {
-	var found *html.Node
-	filter := all(filters...)
-	search(self.root, func(n *html.Node) {
-		if filter(n) {
-			found = n
-			return
-		}
-	})
-	return newNode(found), (found != nil)
-}
-
-func (self *Document) Tag(name string) *FilterChain {
-	return newFilterChain(self).Tag(name)
-}
-
-func (self *Document) Class(name string) *FilterChain {
-	return newFilterChain(self).Class(name)
-}
-
-func (self *Document) Attribute(key, value string) *FilterChain {
-	return newFilterChain(self).Attribute(key, value)
-}
-
 type Node struct {
 	node *html.Node
+}
+
+func (self *Node) Attribute(key string) string {
+	return attribute(self.node, key)
+}
+
+func (self *Node) Parent() *FilterChain {
+	return &FilterChain{
+		root:       self.node,
+		searchFunc: searchParent,
+	}
 }
 
 func newNode(n *html.Node) *Node {
@@ -92,13 +60,18 @@ func (self *Node) Text() string {
 
 type Filter func(*html.Node) bool
 
-func newFilterChain(doc *Document) *FilterChain {
-	return &FilterChain{doc: doc}
+func newFilterChain(root *html.Node) *FilterChain {
+	return &FilterChain{
+		root:       root,
+		searchFunc: search,
+	}
 }
 
 type FilterChain struct {
-	chain []Filter
-	doc   *Document
+	root       *html.Node
+	chain      []Filter
+	match      Filter
+	searchFunc func(*html.Node, func(*html.Node))
 }
 
 func (self *FilterChain) Tag(name string) *FilterChain {
@@ -115,15 +88,29 @@ func (self *FilterChain) Attribute(key, value string) *FilterChain {
 
 func (self *FilterChain) add(f Filter) *FilterChain {
 	self.chain = append(self.chain, f)
+	self.match = all(self.chain...)
 	return self
 }
 
 func (self *FilterChain) First() (*Node, bool) {
-	return self.doc.First(all(self.chain...))
+	var found *html.Node
+	self.searchFunc(self.root, func(n *html.Node) {
+		if self.match(n) {
+			found = n
+			return
+		}
+	})
+	return newNode(found), (found != nil)
 }
 
 func (self *FilterChain) All() []*Node {
-	return self.doc.All(all(self.chain...))
+	var found []*Node
+	self.searchFunc(self.root, func(n *html.Node) {
+		if self.match(n) {
+			found = append(found, newNode(n))
+		}
+	})
+	return found
 }
 
 func Tag(name string) Filter {
@@ -147,6 +134,10 @@ func Attribute(key, value string) Filter {
 
 // attribute returns value for key
 func attribute(node *html.Node, key string) string {
+	if node == nil {
+		return ""
+	}
+
 	for _, a := range node.Attr {
 		if a.Key == key {
 			return a.Val
@@ -166,8 +157,12 @@ func all(filters ...Filter) Filter {
 	}
 }
 
-// search applies visit using Depth First Search
+// search applies visit func using Depth First Search over children
 func search(root *html.Node, visit func(n *html.Node)) {
+	if root == nil {
+		return
+	}
+
 	var dfs func(*html.Node)
 	dfs = func(n *html.Node) {
 		visit(n)
@@ -176,4 +171,20 @@ func search(root *html.Node, visit func(n *html.Node)) {
 		}
 	}
 	dfs(root)
+}
+
+// searchParent applies visit func using Depth First Search over parents
+func searchParent(root *html.Node, visit func(n *html.Node)) {
+	if root == nil {
+		return
+	}
+
+	var dfs func(*html.Node)
+	dfs = func(n *html.Node) {
+		visit(n)
+		for c := n.Parent; c != nil; c = c.Parent {
+			dfs(c)
+		}
+	}
+	dfs(root.Parent)
 }
