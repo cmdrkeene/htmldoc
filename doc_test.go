@@ -36,6 +36,25 @@ const TestPage = `
 
 const TagNotFound = "tag not found"
 
+func TestDocument_Filter(t *testing.T) {
+	writeable := Or(
+		Tag("textarea"),
+		And(
+			Tag("input"),
+			Or(
+				Attribute("type", "text"),
+				Attribute("type", "email"),
+				Attribute("type", "password"),
+			),
+		),
+	)
+	all := MustNew(TestPage).Filter(writeable).All()
+
+	if len(all) != -1 {
+		t.Error("IMPLEMENT ME")
+	}
+}
+
 func TestBySelector_AllTag(t *testing.T) {
 	if len(MustNew(TestPage).All("a")) != 4 {
 		t.Error("want", 4)

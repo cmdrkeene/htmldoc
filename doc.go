@@ -1,3 +1,4 @@
+// Package htmldoc eases traversal of HTML elements on top of x/net/html nodes
 package htmldoc
 
 import (
@@ -8,7 +9,7 @@ import (
 import "bytes"
 
 func New(s string) (*Document, error) {
-	root, err := parseString(s)
+	root, err := html.Parse(bytes.NewBufferString(s))
 	if err != nil {
 		return nil, err
 	}
@@ -21,10 +22,6 @@ func MustNew(s string) *Document {
 		panic(err)
 	}
 	return root
-}
-
-func parseString(s string) (*html.Node, error) {
-	return html.Parse(bytes.NewBufferString(s))
 }
 
 type Node struct {
@@ -73,6 +70,10 @@ type Document struct {
 	chain      []Filter
 	match      Filter
 	searchFunc func(*html.Node, func(*html.Node))
+}
+
+func (self *Document) Filter(f Filter) *Document {
+	return self.add(f)
 }
 
 func (self *Document) Tag(name string) *Document {
