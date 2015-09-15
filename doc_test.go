@@ -34,28 +34,36 @@ const TestPage = `
 
 const TagNotFound = "tag not found"
 
+func TestAll_Simple(t *testing.T) {
+	nodes := MustNew(TestPage).Tag("a").All()
+
+	Expect(t, "Number Found").Equal(len(nodes), 4)
+}
+
 func TestFirst_Simple(t *testing.T) {
-	node, found := MustNew(TestPage).First(Tag("a"))
+	node, found := MustNew(TestPage).Tag("a").First()
+
 	Expect(t, "Found").Equal(found, true)
 	Expect(t, "Node Text").Equal(node.Text(), "About")
 }
 
 func TestFirst_Multi(t *testing.T) {
-	node, found := MustNew(TestPage).First(
-		Tag("a"),
-		Class("active"),
-		Attribute("href", "/sign_up"),
-	)
+	node, found := MustNew(TestPage).
+		Tag("a").
+		Class("active").
+		Attribute("href", "/sign_up").
+		First()
+
 	Expect(t, "Found").Equal(found, true)
 	Expect(t, "Node Text").Equal(node.Text(), "Sign Up")
 }
 
 func TestFirst_MultiNotFound(t *testing.T) {
-	_, found := MustNew(TestPage).First(
-		Tag("a"),
-		Class("bork"),
-		Attribute("href", "/bork"),
-	)
+	_, found := MustNew(TestPage).Tag("a").
+		Class("bork").
+		Attribute("href", "/bork").
+		First()
+
 	Expect(t, "Not Found").Equal(found, false)
 }
 
