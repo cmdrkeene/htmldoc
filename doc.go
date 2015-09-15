@@ -35,6 +35,7 @@ func (self *Node) Attribute(key string) string {
 	return attribute(self.node, key)
 }
 
+// Parent returns a Document that searches upward through parents
 func (self *Node) Parent() *Document {
 	return &Document{
 		root:       self.node,
