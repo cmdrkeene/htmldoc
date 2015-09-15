@@ -87,12 +87,17 @@ func (self *FilterChain) Attribute(key, value string) *FilterChain {
 }
 
 func (self *FilterChain) add(f Filter) *FilterChain {
+	if f == nil {
+		return self
+	}
+
 	self.chain = append(self.chain, f)
 	self.match = all(self.chain...)
 	return self
 }
 
-func (self *FilterChain) First() (*Node, bool) {
+func (self *FilterChain) First(selectors ...string) (*Node, bool) {
+	self.addSelectors(selectors)
 	var found *html.Node
 	self.searchFunc(self.root, func(n *html.Node) {
 		if self.match(n) {
@@ -101,6 +106,67 @@ func (self *FilterChain) First() (*Node, bool) {
 		}
 	})
 	return newNode(found), (found != nil)
+}
+
+func (self *FilterChain) addSelectors(selectors []string) {
+	for _, s := range selectors {
+		for _, f := range self.newSelectorFilter(s) {
+			self.add(f)
+		}
+	}
+}
+
+func (self *FilterChain) newSelectorFilter(s string) []Filter {
+	chain := []Filter{}
+	buf := bytes.NewBuffer(nil)
+
+	var tagSet bool
+	var settingClass bool
+	var settingID bool
+
+	appendFilter := func(f Filter) {
+		if buf.Len() > 0 {
+			chain = append(chain, f)
+			buf.Truncate(0)
+		}
+	}
+
+	appendTag := func() {
+		appendFilter(Tag(buf.String()))
+		tagSet = true
+	}
+
+	for _, r := range s {
+		if r == '.' {
+			settingClass = true
+			appendTag()
+			continue
+		}
+
+		if r == '#' {
+			settingID = true
+			appendTag()
+			continue
+		}
+
+		buf.WriteRune(r)
+	}
+
+	if tagSet {
+		if settingClass {
+			appendFilter(Class(buf.String()))
+			settingClass = false
+		} else if settingID {
+			appendFilter(Attribute("id", buf.String()))
+			settingID = false
+		} else {
+			// ...
+		}
+	} else {
+		appendTag()
+	}
+
+	return chain
 }
 
 func (self *FilterChain) All() []*Node {

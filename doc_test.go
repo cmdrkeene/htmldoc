@@ -12,7 +12,7 @@ const TestPage = `
 <head><title>Test Page</title></head>
 <body>
   <nav>
-    <ul class="nav">
+    <ul id="nav" class="fancy">
       <li><a href="/log_in"><button>Log In</button></a></li>
       <li><a href=" /sign_up " class="active "><button>Sign Up</button></a></li>
       <li><a href="/home" class="one two three">Home</a></li>
@@ -35,6 +35,23 @@ const TestPage = `
 `
 
 const TagNotFound = "tag not found"
+
+func TestBySelector_Tag(t *testing.T) {
+	node, _ := MustNew(TestPage).First("a")
+	Expect(t, "Found By Selector").Equal(node.Text(), "About")
+}
+
+func TestBySelector_TagAndClass(t *testing.T) {
+	node, _ := MustNew(TestPage).First("a.active")
+
+	Expect(t, "Found By Selector").Equal(node.Text(), "Sign Up")
+}
+
+func TestBySelector_TagAndID(t *testing.T) {
+	node, found := MustNew(TestPage).First("ul#nav")
+	Expect(t, "Found ul#nav").Equal(found, true)
+	Expect(t, "ul#nav class name").Equal(node.Attribute("class"), "fancy")
+}
 
 func TestParent(t *testing.T) {
 	input, _ := MustNew(TestPage).
