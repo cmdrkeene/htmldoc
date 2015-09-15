@@ -7,15 +7,15 @@ import (
 )
 import "bytes"
 
-func New(s string) (*FilterChain, error) {
+func New(s string) (*Document, error) {
 	root, err := parseString(s)
 	if err != nil {
 		return nil, err
 	}
-	return newFilterChain(root), nil
+	return newDocument(root), nil
 }
 
-func MustNew(s string) *FilterChain {
+func MustNew(s string) *Document {
 	root, err := New(s)
 	if err != nil {
 		panic(err)
@@ -35,8 +35,8 @@ func (self *Node) Attribute(key string) string {
 	return attribute(self.node, key)
 }
 
-func (self *Node) Parent() *FilterChain {
-	return &FilterChain{
+func (self *Node) Parent() *Document {
+	return &Document{
 		root:       self.node,
 		searchFunc: searchParent,
 	}
@@ -60,33 +60,33 @@ func (self *Node) Text() string {
 
 type Filter func(*html.Node) bool
 
-func newFilterChain(root *html.Node) *FilterChain {
-	return &FilterChain{
+func newDocument(root *html.Node) *Document {
+	return &Document{
 		root:       root,
 		searchFunc: search,
 	}
 }
 
-type FilterChain struct {
+type Document struct {
 	root       *html.Node
 	chain      []Filter
 	match      Filter
 	searchFunc func(*html.Node, func(*html.Node))
 }
 
-func (self *FilterChain) Tag(name string) *FilterChain {
+func (self *Document) Tag(name string) *Document {
 	return self.add(Tag(name))
 }
 
-func (self *FilterChain) Class(name string) *FilterChain {
+func (self *Document) Class(name string) *Document {
 	return self.add(Class(name))
 }
 
-func (self *FilterChain) Attribute(key, value string) *FilterChain {
+func (self *Document) Attribute(key, value string) *Document {
 	return self.add(Attribute(key, value))
 }
 
-func (self *FilterChain) add(f Filter) *FilterChain {
+func (self *Document) add(f Filter) *Document {
 	if f == nil {
 		return self
 	}
@@ -96,7 +96,7 @@ func (self *FilterChain) add(f Filter) *FilterChain {
 	return self
 }
 
-func (self *FilterChain) First(selectors ...string) (*Node, bool) {
+func (self *Document) First(selectors ...string) (*Node, bool) {
 	self.addSelectors(selectors)
 	var found *html.Node
 	self.searchFunc(self.root, func(n *html.Node) {
@@ -108,7 +108,7 @@ func (self *FilterChain) First(selectors ...string) (*Node, bool) {
 	return newNode(found), (found != nil)
 }
 
-func (self *FilterChain) addSelectors(selectors []string) {
+func (self *Document) addSelectors(selectors []string) {
 	for _, s := range selectors {
 		for _, f := range self.newSelectorFilter(s) {
 			self.add(f)
@@ -116,7 +116,7 @@ func (self *FilterChain) addSelectors(selectors []string) {
 	}
 }
 
-func (self *FilterChain) newSelectorFilter(s string) []Filter {
+func (self *Document) newSelectorFilter(s string) []Filter {
 	chain := []Filter{}
 	buf := bytes.NewBuffer(nil)
 
@@ -169,7 +169,7 @@ func (self *FilterChain) newSelectorFilter(s string) []Filter {
 	return chain
 }
 
-func (self *FilterChain) All(selectors ...string) []*Node {
+func (self *Document) All(selectors ...string) []*Node {
 	self.addSelectors(selectors)
 	var found []*Node
 	self.searchFunc(self.root, func(n *html.Node) {
